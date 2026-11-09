@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f8ff">
+  <title>VOTE 관리자 페이지</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="VOTE 홈">
+      <span class="brand-mark">V</span>
+      <span>VOTE<span class="brand-dot">.</span></span>
+    </a>
+    <div class="topbar-right">
+      <span class="admin-demo-badge">관리자 페이지</span>
+      <a class="admin-home-link" href="index.html">학생 화면으로</a>
+    </div>
+  </header>
+
+  <main class="page-shell admin-page">
+    <section class="admin-section" id="admin">
+      <div class="admin-heading">
+        <div><span class="eyebrow section-eyebrow">POLL MANAGEMENT</span><h1>투표 관리 <span>⚙</span></h1><p>투표를 만들고 진행 상황을 관리해요.</p></div>
+        <span class="admin-demo-badge">데모 관리자</span>
+      </div>
+      <div class="admin-layout">
+        <form class="admin-form" id="poll-form">
+          <h2 id="form-title">새 투표 만들기</h2>
+          <input type="hidden" id="poll-id">
+          <label for="poll-question">투표 질문</label>
+          <input id="poll-question" type="text" maxlength="100" placeholder="예: 점심시간을 늘리는 것에 찬성하나요?" required>
+          <label for="poll-category">종류</label>
+          <select id="poll-category">
+            <option value="학교생활">학교생활</option><option value="급식">급식</option><option value="행사">행사</option><option value="시설">시설</option><option value="기타">기타</option>
+          </select>
+          <label for="poll-options">선택지 <span class="label-hint">줄바꿈으로 구분 (2개 이상)</span></label>
+          <textarea id="poll-options" rows="4" placeholder="찬성&#10;반대" required></textarea>
+          <div class="admin-date-row">
+            <div><label for="poll-deadline">마감 일시</label><input id="poll-deadline" type="datetime-local" required></div>
+            <div><label for="poll-author">담당자</label><input id="poll-author" type="text" maxlength="30" value="학생회"></div>
+          </div>
+          <div class="form-actions"><button class="primary-button" type="submit" id="save-poll-button">투표 생성하기</button><button class="text-button hidden" type="button" id="cancel-edit-button">취소</button></div>
+          <p class="form-message" id="form-message" role="status"></p>
+        </form>
+        <div class="admin-list-panel">
+          <div class="admin-list-heading"><h2>투표 관리 목록</h2><span id="admin-poll-count"></span></div>
+          <div class="admin-poll-list" id="admin-poll-list"></div>
+        </div>
+      </div>
+      <p class="demo-warning"><span>ⓘ</span> 학습용 데모라 데이터는 이 브라우저에만 저장되고 다른 학생과 공유되지 않아요. 실제 익명성·학생 인증·관리자 권한을 보장하려면 서버와 데이터베이스, 학교 계정 인증이 필요해요.</p>
+    </section>
+    <footer class="footer">
+      <a class="brand footer-brand" href="index.html"><span class="brand-mark">V</span><span>VOTE<span class="brand-dot">.</span></span></a>
+      <span>관리자 화면</span>
+      <a href="#admin">처음으로 ↑</a>
+    </footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

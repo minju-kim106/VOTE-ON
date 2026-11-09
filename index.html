@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f8ff">
+  <title>VOTE — 우리 학교, 우리 목소리</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="VOTE 홈">
+      <span class="brand-mark">V</span>
+      <span>VOTE<span class="brand-dot">.</span></span>
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-link active" href="#home">투표</a>
+      <a class="nav-link" href="board.html">익명 게시판</a>
+    </nav>
+    <div class="topbar-right">
+      <span class="school-label"><span class="online-dot"></span> 학생 페이지</span>
+      <button class="icon-button" id="notification-button" type="button" aria-label="마감 알림 보기">
+        <span aria-hidden="true">♧</span>
+        <span class="notification-count" id="notification-count">0</span>
+      </button>
+      <a class="admin-login-button" href="admin.html">관리자 로그인 <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main class="page-shell" id="home">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="sparkle">✳</span> STUDENT VOICE, REAL CHANGE</span>
+        <h1>우리 학교의 내일,<br><span>우리의 한 표</span>로.</h1>
+        <p>작은 의견도 모이면 큰 변화가 돼요.<br class="desktop-break"> 지금 진행 중인 투표에 참여해 보세요.</p>
+        <a class="primary-button hero-button" href="#polls">투표 참여하기 <span aria-hidden="true">↗</span></a>
+        <div class="hero-note"><span class="shield-icon">✓</span> 이 데모는 투표자 정보를 별도로 받지 않아요</div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="hero-card">
+          <div class="mini-card-top"><span class="mini-live"><i></i> 진행 중</span><span>•••</span></div>
+          <div class="mini-question">다음 체육대회<br>종목은?</div>
+          <div class="mini-option"><span>⚽</span> 축구 <span class="mini-percent">42%</span></div>
+          <div class="mini-option selected"><span>🏃</span> 계주 <span class="mini-percent">58%</span></div>
+          <div class="mini-progress"><i></i></div>
+          <div class="mini-footer">지금까지 <b>128명</b> 참여했어요</div>
+        </div>
+        <div class="float-bubble bubble-top">✦ <b>한 표로</b><br>변화를 만들어요</div>
+        <div class="float-bubble bubble-bottom"><span>✦</span> 함께 만드는 우리 학교</div>
+      </div>
+      <div class="hero-decoration decoration-one"></div>
+      <div class="hero-decoration decoration-two"></div>
+    </section>
+
+    <section class="stats-row" aria-label="투표 현황">
+      <div class="stat-item"><span class="stat-icon blue">◉</span><div><strong id="active-count">0</strong><span>진행 중인 투표</span></div></div>
+      <div class="stat-item"><span class="stat-icon purple">♧</span><div><strong id="total-voters">0</strong><span>누적 참여</span></div></div>
+      <div class="stat-item"><span class="stat-icon green">✓</span><div><strong id="closed-count">0</strong><span>결과 공개</span></div></div>
+      <div class="stat-caption">여러분의 목소리가 변화를 만들어요 <span>✦</span></div>
+    </section>
+
+    <section class="content-section" id="polls">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow section-eyebrow">YOUR VOICE MATTERS</span>
+          <h2>지금 참여할 수 있어요 <span class="heading-emoji">👋</span></h2>
+          <p>관심 있는 주제를 선택하고 의견을 들려주세요. <span class="voting-anonymous">◉ 익명 투표</span></p>
+        </div>
+        <div class="section-controls">
+          <label class="search-box"><span aria-hidden="true">⌕</span><input id="search-input" type="search" placeholder="투표 검색" aria-label="투표 검색"></label>
+          <select class="sort-select" id="sort-select" aria-label="투표 정렬">
+            <option value="latest">최신순</option>
+            <option value="closing">마감 임박순</option>
+          </select>
+        </div>
+      </div>
+      <div class="category-list" id="category-list" aria-label="투표 종류별 분류"></div>
+      <div class="poll-grid" id="poll-grid"></div>
+      <div class="empty-state hidden" id="empty-state">
+        <span>🔎</span><h3>조건에 맞는 투표가 없어요</h3><p>다른 검색어나 카테고리를 선택해 보세요.</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <a class="brand footer-brand" href="#home"><span class="brand-mark">V</span><span>VOTE<span class="brand-dot">.</span></span></a>
+      <span>모두의 한 표가 만드는 더 나은 학교</span>
+      <div class="footer-links">
+        <a class="admin-entry-link" href="admin.html"><span aria-hidden="true">⌑</span> 관리자 입장</a>
+        <a href="#home">처음으로 ↑</a>
+      </div>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="notification-popover hidden" id="notification-popover" role="status">
+    <div class="popover-heading"><strong>마감 알림</strong><button class="plain-icon" type="button" id="close-notifications" aria-label="알림 닫기">×</button></div>
+    <div id="notification-list"></div>
+  </div>
+</body>
+</html>

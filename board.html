@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f8ff">
+  <title>VOTE 익명 게시판</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="VOTE 홈">
+      <span class="brand-mark">V</span>
+      <span>VOTE<span class="brand-dot">.</span></span>
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-link" href="index.html">투표</a>
+      <a class="nav-link active" href="board.html">익명 게시판</a>
+    </nav>
+    <div class="topbar-right">
+      <span class="school-label"><span class="online-dot"></span> 학생 페이지</span>
+      <a class="admin-login-button" href="admin.html">관리자 로그인 <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main class="page-shell board-page">
+    <section class="board-section" id="board">
+      <div class="board-intro">
+        <span class="eyebrow section-eyebrow">ANONYMOUS BOARD</span>
+        <h1>하고 싶은 말,<br>여기서 편하게 <span>💬</span></h1>
+        <p>이름 없이 의견을 나눠요.<br>서로를 존중하는 말로 함께해 주세요.</p>
+        <div class="board-privacy"><span>◉</span> 로그인 없이 익명으로 작성</div>
+        <a class="board-back-link" href="index.html">← 투표 화면으로 돌아가기</a>
+      </div>
+      <div class="board-panel">
+        <div class="board-panel-heading">
+          <div><h2>자유 의견</h2><span id="post-count">모두의 생각을 모아봐요</span></div>
+          <span class="board-live"><i></i> 실시간</span>
+        </div>
+        <form class="post-form" id="post-form">
+          <label class="sr-only" for="post-input">익명 의견 작성</label>
+          <textarea id="post-input" maxlength="240" rows="2" placeholder="학교에 바라는 점이나 자유로운 의견을 남겨주세요."></textarea>
+          <div class="post-form-footer"><span id="character-count">0 / 240</span><button class="primary-button post-button" type="submit">익명으로 등록 <span>↗</span></button></div>
+        </form>
+        <div class="post-list" id="post-list"></div>
+      </div>
+    </section>
+    <footer class="footer">
+      <a class="brand footer-brand" href="index.html"><span class="brand-mark">V</span><span>VOTE<span class="brand-dot">.</span></span></a>
+      <span>모두의 생각을 익명으로 나누어요</span>
+      <a class="board-footer-home" href="index.html">투표 화면 ↑</a>
+    </footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
