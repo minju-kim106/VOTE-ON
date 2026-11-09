@@ -1,4 +1,4 @@
-// 브라우저 저장소를 사용하므로 이 데모의 데이터는 현재 브라우저에만 저장됩니다.
+// 투표 데이터는 브라우저에, 익명 게시글과 신고 정보는 서버에 저장됩니다.
 const STORAGE_KEY = 'vote-school-demo-v1';
 
 const initialData = {
@@ -210,11 +210,27 @@ function renderStats() {
 
 function renderPosts() {
   if (!document.querySelector('#post-list')) return;
-  const sortedPosts = [...data.posts].sort((a, b) => b.createdAt - a.createdAt);
+  const sortedPosts = [...boardPosts].sort((a, b) => b.createdAt - a.createdAt);
   document.querySelector('#post-count').textContent = `${sortedPosts.length}개의 익명 의견`;
   document.querySelector('#post-list').innerHTML = sortedPosts.length
-    ? sortedPosts.map(post => `<article class="post-item"><div class="avatar-anon" aria-hidden="true">익</div><div class="post-item-body"><span class="post-author">익명</span><time class="post-time">${escapeHTML(relativeTime(post.createdAt))}</time><p class="post-text">${escapeHTML(post.text)}</p></div></article>`).join('')
+    ? sortedPosts.map(post => `<article class="post-item"><div class="avatar-anon" aria-hidden="true">익</div><div class="post-item-body"><span class="post-author">익명</span><time class="post-time">${escapeHTML(relativeTime(post.createdAt))}</time><p class="post-text">${escapeHTML(post.text)}</p><button class="report-post-button" type="button" data-report-post="${escapeHTML(post.id)}">신고</button></div></article>`).join('')
     : '<div class="empty-posts">첫 번째 의견을 남겨주세요.</div>';
+}
+
+let boardPosts = [];
+
+async function loadBoardPosts() {
+  const response = await fetch('/api/board/posts');
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || '게시글을 불러오지 못했습니다.');
+  boardPosts = result.posts;
+  renderPosts();
+}
+
+function setPostMessage(message, isError = false) {
+  const messageElement = document.querySelector('#post-message');
+  messageElement.textContent = message;
+  messageElement.classList.toggle('error', isError);
 }
 
 function relativeTime(timestamp) {
@@ -304,20 +320,144 @@ if (postInput) postInput.addEventListener('input', () => {
 });
 
 const postForm = document.querySelector('#post-form');
-if (postForm) postForm.addEventListener('submit', event => {
+if (postForm) postForm.addEventListener('submit', async event => {
   event.preventDefault();
   const text = postInput.value.trim();
   if (!text) {
-    showToast('의견을 입력해 주세요.');
+    setPostMessage('의견을 입력해 주세요.', true);
     postInput.focus();
     return;
   }
-  data.posts.push({ id: `post-${Date.now()}`, text, createdAt: Date.now() });
-  if (saveData()) {
+  const moderation = window.VoteModeration.checkPost(text);
+  if (!moderation.allowed) {
+    setPostMessage(moderation.reason, true);
+    postInput.focus();
+    return;
+  }
+  const submitButton = postForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  try {
+    const response = await fetch('/api/board/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      setPostMessage(result.error || '게시글을 등록하지 못했습니다.', true);
+      return;
+    }
     postInput.value = '';
     document.querySelector('#character-count').textContent = '0 / 240';
-    renderPosts();
-    showToast('익명 의견을 등록했어요.');
+    setPostMessage('익명 의견을 등록했어요.');
+    await loadBoardPosts();
+  } catch (error) {
+    console.error('게시글 등록 요청에 실패했습니다.', error);
+    setPostMessage('서버에 연결하지 못했습니다. 서버를 실행한 뒤 다시 시도해 주세요.', true);
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+
+const postList = document.querySelector('#post-list');
+if (postList) postList.addEventListener('click', async event => {
+  const reportButton = event.target.closest('[data-report-post]');
+  if (!reportButton) return;
+  reportButton.disabled = true;
+  try {
+    const response = await fetch(`/api/board/posts/${encodeURIComponent(reportButton.dataset.reportPost)}/report`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || '신고를 접수하지 못했습니다.');
+    setPostMessage('신고가 접수되었습니다. 관리자가 확인할게요.');
+  } catch (error) {
+    console.error('게시글 신고 요청에 실패했습니다.', error);
+    setPostMessage(error.message || '신고를 접수하지 못했습니다. 다시 시도해 주세요.', true);
+    reportButton.disabled = false;
+  }
+});
+
+const adminLoginForm = document.querySelector('#admin-login-form');
+const adminReportList = document.querySelector('#admin-reports-list');
+const adminReportMessage = document.querySelector('#admin-report-message');
+const adminLogoutButton = document.querySelector('#admin-logout-button');
+
+function setAdminReportMessage(message, isError = false) {
+  if (!adminReportMessage) return;
+  adminReportMessage.textContent = message;
+  adminReportMessage.classList.toggle('error', isError);
+}
+
+function renderAdminReports(posts) {
+  adminReportList.innerHTML = posts.length
+    ? posts.map(post => `<article class="reported-post"><div><p class="post-text">${escapeHTML(post.text)}</p><span>${post.reportCount}회 신고 · ${escapeHTML(relativeTime(post.createdAt))}</span></div><button class="admin-delete-post" type="button" data-delete-reported-post="${escapeHTML(post.id)}">삭제</button></article>`).join('')
+    : '<div class="admin-empty">확인할 신고 게시글이 없습니다.</div>';
+}
+
+async function loadAdminReports() {
+  const response = await fetch('/api/admin/reports');
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || '신고 목록을 불러오지 못했습니다.');
+  adminLoginForm.classList.add('hidden');
+  adminLogoutButton.classList.remove('hidden');
+  adminReportList.classList.remove('hidden');
+  renderAdminReports(result.posts);
+  setAdminReportMessage('신고된 게시글을 확인하고 필요한 경우 삭제할 수 있습니다.');
+}
+
+if (adminLoginForm) adminLoginForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const passwordInput = document.querySelector('#admin-password');
+  const submitButton = adminLoginForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  try {
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: passwordInput.value })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || '로그인하지 못했습니다.');
+    passwordInput.value = '';
+    await loadAdminReports();
+  } catch (error) {
+    setAdminReportMessage(error.message || '로그인하지 못했습니다.', true);
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+
+if (adminReportList) adminReportList.addEventListener('click', async event => {
+  const deleteButton = event.target.closest('[data-delete-reported-post]');
+  if (!deleteButton) return;
+  if (!window.confirm('신고된 게시글을 삭제할까요?')) return;
+  deleteButton.disabled = true;
+  try {
+    const response = await fetch(`/api/admin/posts/${encodeURIComponent(deleteButton.dataset.deleteReportedPost)}`, { method: 'DELETE' });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || '게시글을 삭제하지 못했습니다.');
+    await loadAdminReports();
+    setAdminReportMessage('게시글을 삭제했습니다.');
+  } catch (error) {
+    setAdminReportMessage(error.message || '게시글을 삭제하지 못했습니다.', true);
+    deleteButton.disabled = false;
+  }
+});
+
+if (adminLogoutButton) adminLogoutButton.addEventListener('click', async () => {
+  try {
+    const response = await fetch('/api/admin/logout', { method: 'POST' });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || '로그아웃하지 못했습니다.');
+    adminLoginForm.classList.remove('hidden');
+    adminLogoutButton.classList.add('hidden');
+    adminReportList.classList.add('hidden');
+    setAdminReportMessage('로그아웃했습니다.');
+  } catch (error) {
+    setAdminReportMessage(error.message || '로그아웃하지 못했습니다.', true);
   }
 });
 
@@ -379,6 +519,17 @@ if (pollForm) pollForm.addEventListener('submit', event => {
   }
   if (saveData()) {
     renderAll();
+
+    if (postList) loadBoardPosts().catch(error => {
+      console.error('게시글을 불러오지 못했습니다.', error);
+      setPostMessage('게시판 서버에 연결할 수 없습니다. 안내된 방법으로 서버를 실행해 주세요.', true);
+    });
+
+    if (adminReportList) loadAdminReports().catch(error => {
+      if (!error.message.includes('관리자 로그인이 필요합니다.')) {
+        setAdminReportMessage(error.message || '신고 목록을 불러오지 못했습니다.', true);
+      }
+    });
     resetPollForm();
     document.querySelector('#admin').scrollIntoView({ behavior: 'smooth' });
   }

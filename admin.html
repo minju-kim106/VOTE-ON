@@ -50,7 +50,17 @@
           <div class="admin-poll-list" id="admin-poll-list"></div>
         </div>
       </div>
-      <p class="demo-warning"><span>ⓘ</span> 학습용 데모라 데이터는 이 브라우저에만 저장되고 다른 학생과 공유되지 않아요. 실제 익명성·학생 인증·관리자 권한을 보장하려면 서버와 데이터베이스, 학교 계정 인증이 필요해요.</p>
+      <p class="demo-warning"><span>ⓘ</span> 투표 관리는 이 브라우저에 저장되며, 게시판과 신고 내역은 서버에 저장됩니다. 실제 학생 인증과 서비스 운영에는 학교 계정 인증 및 안전한 서버 배포가 추가로 필요해요.</p>
+      <section class="admin-reports" aria-labelledby="report-heading">
+        <div class="admin-list-heading"><h2 id="report-heading">신고된 게시글</h2><button class="text-button hidden" type="button" id="admin-logout-button">로그아웃</button></div>
+        <form class="admin-login-form" id="admin-login-form">
+          <label for="admin-password">관리자 암호</label>
+          <input id="admin-password" type="password" autocomplete="current-password" required>
+          <button class="primary-button" type="submit">신고 목록 확인</button>
+        </form>
+        <p class="admin-report-message" id="admin-report-message" role="status" aria-live="polite"></p>
+        <div class="admin-reports-list hidden" id="admin-reports-list"></div>
+      </section>
     </section>
     <footer class="footer">
       <a class="brand footer-brand" href="index.html"><span class="brand-mark">V</span><span>VOTE<span class="brand-dot">.</span></span></a>

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f5f8ff">
   <title>VOTE 익명 게시판</title>
   <link rel="stylesheet" href="style.css">
+  <script src="moderation.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -42,6 +43,7 @@
           <label class="sr-only" for="post-input">익명 의견 작성</label>
           <textarea id="post-input" maxlength="240" rows="2" placeholder="학교에 바라는 점이나 자유로운 의견을 남겨주세요."></textarea>
           <div class="post-form-footer"><span id="character-count">0 / 240</span><button class="primary-button post-button" type="submit">익명으로 등록 <span>↗</span></button></div>
+          <p class="post-message" id="post-message" role="status" aria-live="polite"></p>
         </form>
         <div class="post-list" id="post-list"></div>
       </div>
