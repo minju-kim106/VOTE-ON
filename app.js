@@ -1,6 +1,5 @@
 // 브라우저 저장소를 사용하므로 이 데모의 데이터는 현재 브라우저에만 저장됩니다.
 const STORAGE_KEY = 'vote-school-demo-v1';
-const CATEGORIES = ['전체', '학교생활', '급식', '행사', '시설', '기타'];
 
 const initialData = {
   polls: [
@@ -90,14 +89,11 @@ function loadData() {
 }
 
 let data = loadData();
-let activeCategory = '전체';
 let toastTimer;
 
 const pollGrid = document.querySelector('#poll-grid');
-const categoryList = document.querySelector('#category-list');
-const searchInput = document.querySelector('#search-input');
-const sortSelect = document.querySelector('#sort-select');
 const toast = document.querySelector('#toast');
+const votePollGrid = document.querySelector('#vote-poll-grid');
 
 function saveData() {
   try {
@@ -114,10 +110,6 @@ function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[character]);
-}
-
-function formatDate(value) {
-  return new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' }).format(new Date(value));
 }
 
 function formatRemaining(deadline) {
@@ -145,57 +137,66 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => toast.classList.remove('show'), 2600);
 }
 
-function renderCategories() {
-  if (!categoryList) return;
-  const available = new Set(data.polls.map(poll => poll.category));
-  categoryList.innerHTML = CATEGORIES.filter(category => category === '전체' || available.has(category))
-    .map(category => `<button class="category-chip ${activeCategory === category ? 'active' : ''}" type="button" data-category="${escapeHTML(category)}">${escapeHTML(category)}</button>`)
-    .join('');
-}
-
 function renderPolls() {
-  if (!pollGrid || !searchInput || !sortSelect) return;
-  const query = searchInput.value.trim().toLocaleLowerCase('ko');
-  let polls = data.polls.filter(poll => {
-    const categoryMatches = activeCategory === '전체' || poll.category === activeCategory;
-    const searchMatches = `${poll.question} ${poll.category}`.toLocaleLowerCase('ko').includes(query);
-    return categoryMatches && searchMatches;
-  });
-
-  if (sortSelect.value === 'closing') {
-    polls.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
-  } else {
-    polls.sort((a, b) => b.createdAt - a.createdAt);
-  }
-
+  if (!pollGrid) return;
+  const polls = [...data.polls].sort((a, b) => b.createdAt - a.createdAt);
   document.querySelector('#empty-state').classList.toggle('hidden', polls.length > 0);
   pollGrid.innerHTML = polls.map(renderPollCard).join('');
 }
 
+function renderVotePolls() {
+  if (!votePollGrid) return;
+  const openPolls = data.polls.filter(poll => !isClosed(poll));
+  const polls = openPolls
+    .filter(poll => data.votesByPoll[poll.id] === undefined)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  const completionMessage = document.querySelector('#vote-completion-message');
+  const hasCompletedVotes = data.polls.some(poll => data.votesByPoll[poll.id] !== undefined);
+  completionMessage.classList.toggle('hidden', !hasCompletedVotes);
+  completionMessage.textContent = hasCompletedVotes
+    ? '투표가 완료됐어요. 참여한 투표는 목록에서 숨겨집니다.'
+    : '';
+  document.querySelector('#vote-empty-state').classList.toggle('hidden', polls.length > 0);
+  if (openPolls.length > 0 && polls.length === 0) {
+    document.querySelector('#vote-empty-state h2').textContent = '모든 진행 중인 투표에 참여했어요!';
+  } else {
+    document.querySelector('#vote-empty-state h2').textContent = '현재 참여할 수 있는 투표가 없어요';
+  }
+  votePollGrid.innerHTML = polls.map(poll => {
+    const options = poll.options.map((option, index) => `
+      <label class="vote-choice">
+        <input type="radio" name="vote-${escapeHTML(poll.id)}" value="${index}" data-vote-option="${index}">
+        <span>${escapeHTML(option.text)}</span>
+      </label>`).join('');
+
+    return `<article class="poll-card vote-card" data-vote-card="${escapeHTML(poll.id)}">
+      <div class="poll-card-top"><span class="category-tag">${escapeHTML(poll.category)}</span><span class="poll-state">● 진행 중</span></div>
+      <h2 class="poll-title">${escapeHTML(poll.question)}</h2>
+      <div class="poll-meta"><span>${escapeHTML(poll.author)}</span><span>${escapeHTML(formatRemaining(poll.deadline))}</span></div>
+      <form class="vote-form" data-vote-form="${escapeHTML(poll.id)}">
+        <fieldset class="vote-choice-list">
+          <legend class="sr-only">투표 선택지</legend>
+          ${options}
+        </fieldset>
+        <button class="vote-submit" type="submit">투표하기</button>
+      </form>
+    </article>`;
+  }).join('');
+}
+
 function renderPollCard(poll) {
-  const closed = isClosed(poll);
   const total = pollTotal(poll);
-  const chosenOption = data.votesByPoll[poll.id];
-  const options = poll.options.map((option, index) => {
+  const options = poll.options.map(option => {
     const percent = total ? Math.round(option.votes / total * 100) : 0;
-    const showResults = closed;
-    const selected = chosenOption === index;
-    const content = `<span class="option-content"><span>${escapeHTML(option.text)}</span>${showResults ? `<span class="option-count">${percent}% · ${option.votes}표</span>` : ''}</span>`;
-    const progress = showResults ? `<span class="option-result-bar" style="width:${percent}%"></span>` : '';
-    if (closed) return `<div class="vote-option ${selected ? 'chosen' : ''}">${progress}${content}</div>`;
-    return `<button class="vote-option ${selected ? 'chosen' : ''}" type="button" data-poll-id="${escapeHTML(poll.id)}" data-option-index="${index}" ${chosenOption !== undefined ? 'disabled' : ''}>${progress}${content}</button>`;
+    return `<div class="result-option">
+      <div class="result-option-heading"><span>${escapeHTML(option.text)}</span><span class="result-votes">${option.votes.toLocaleString('ko-KR')}표 · ${percent}%</span></div>
+      <div class="result-track" role="img" aria-label="${escapeHTML(option.text)} ${option.votes}표, ${percent}%"><span class="result-fill" style="width:${percent}%"></span></div>
+    </div>`;
   }).join('');
 
-  const deadlineLabel = closed ? `마감 ${formatDate(poll.deadline)}` : formatRemaining(poll.deadline);
   return `<article class="poll-card">
-    <div class="poll-card-top"><span class="category-tag">${escapeHTML(poll.category)}</span><span class="poll-state ${closed ? 'closed' : ''}">${closed ? '결과 공개' : '● 진행 중'}</span></div>
     <h3 class="poll-title">${escapeHTML(poll.question)}</h3>
-    <div class="poll-meta"><span>${escapeHTML(poll.author)}</span><span class="${!closed && deadlineLabel === '곧 마감' ? 'deadline-soon' : ''}">${escapeHTML(deadlineLabel)}</span></div>
     <div class="option-list">${options}</div>
-    <div class="poll-action-row">
-      <span>${total.toLocaleString('ko-KR')}명 참여</span>
-      ${closed ? '<span class="result-label">투표 결과</span>' : chosenOption !== undefined ? '<span class="result-label">참여 완료 ✓</span>' : `<button class="vote-submit" type="button" data-submit-poll="${escapeHTML(poll.id)}">투표하기</button>`}
-    </div>
   </article>`;
 }
 
@@ -244,15 +245,49 @@ function renderNotifications() {
 }
 
 function renderAll() {
-  if (pollGrid) {
-    renderCategories();
-    renderPolls();
-  }
+  renderPolls();
+  renderVotePolls();
   renderStats();
   renderPosts();
   renderAdminPolls();
   renderNotifications();
 }
+
+if (votePollGrid) votePollGrid.addEventListener('change', event => {
+  const radio = event.target.closest('[data-vote-option]');
+  if (!radio) return;
+  const card = radio.closest('[data-vote-card]');
+  card.querySelectorAll('.vote-choice').forEach(choice => choice.classList.remove('selected'));
+  radio.closest('.vote-choice').classList.add('selected');
+});
+
+if (votePollGrid) votePollGrid.addEventListener('submit', event => {
+  const form = event.target.closest('[data-vote-form]');
+  if (!form) return;
+  event.preventDefault();
+  const poll = data.polls.find(item => item.id === form.dataset.voteForm);
+  const selected = form.querySelector('[data-vote-option]:checked');
+  if (!poll || isClosed(poll) || data.votesByPoll[poll.id] !== undefined) {
+    showToast('이미 마감되었거나 참여한 투표예요.');
+    renderAll();
+    return;
+  }
+  if (!selected) {
+    showToast('먼저 선택지를 골라주세요.');
+    return;
+  }
+
+  const optionIndex = Number(selected.value);
+  poll.options[optionIndex].votes += 1;
+  data.votesByPoll[poll.id] = optionIndex;
+  if (saveData()) {
+    renderAll();
+    showToast('소중한 한 표가 익명으로 반영됐어요!');
+  } else {
+    poll.options[optionIndex].votes -= 1;
+    delete data.votesByPoll[poll.id];
+  }
+});
 
 function resetPollForm() {
   document.querySelector('#poll-form').reset();
@@ -262,50 +297,6 @@ function resetPollForm() {
   document.querySelector('#save-poll-button').textContent = '투표 생성하기';
   document.querySelector('#cancel-edit-button').classList.add('hidden');
 }
-
-if (categoryList) categoryList.addEventListener('click', event => {
-  const button = event.target.closest('[data-category]');
-  if (!button) return;
-  activeCategory = button.dataset.category;
-  renderCategories();
-  renderPolls();
-});
-
-if (pollGrid) pollGrid.addEventListener('click', event => {
-  const optionButton = event.target.closest('[data-option-index]');
-  if (optionButton) {
-    const poll = data.polls.find(item => item.id === optionButton.dataset.pollId);
-    if (!poll || isClosed(poll) || data.votesByPoll[poll.id] !== undefined) return;
-    pollGrid.querySelectorAll(`[data-poll-id="${CSS.escape(poll.id)}"]`).forEach(button => button.classList.remove('chosen'));
-    optionButton.classList.add('chosen');
-    optionButton.setAttribute('aria-pressed', 'true');
-    return;
-  }
-
-  const submitButton = event.target.closest('[data-submit-poll]');
-  if (!submitButton) return;
-  const poll = data.polls.find(item => item.id === submitButton.dataset.submitPoll);
-  const selected = pollGrid.querySelector(`[data-poll-id="${CSS.escape(submitButton.dataset.submitPoll)}"].chosen`);
-  if (!poll || !selected) {
-    showToast('먼저 선택지를 골라주세요.');
-    return;
-  }
-  if (isClosed(poll) || data.votesByPoll[poll.id] !== undefined) {
-    showToast('이미 마감되었거나 참여한 투표예요.');
-    return;
-  }
-
-  const optionIndex = Number(selected.dataset.optionIndex);
-  poll.options[optionIndex].votes += 1;
-  data.votesByPoll[poll.id] = optionIndex;
-  if (saveData()) {
-    renderAll();
-    showToast('소중한 한 표가 익명으로 반영됐어요!');
-  }
-});
-
-if (searchInput) searchInput.addEventListener('input', renderPolls);
-if (sortSelect) sortSelect.addEventListener('change', renderPolls);
 
 const postInput = document.querySelector('#post-input');
 if (postInput) postInput.addEventListener('input', () => {

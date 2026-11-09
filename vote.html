@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f8ff">
+  <title>VOTE 투표 참여</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body class="vote-page-body">
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="VOTE 홈">
+      <span class="brand-mark">V</span>
+      <span>VOTE<span class="brand-dot">.</span></span>
+    </a>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <a class="nav-link active" href="vote.html">투표</a>
+      <a class="nav-link" href="board.html">익명 게시판</a>
+    </nav>
+    <div class="topbar-right">
+      <span class="school-label"><span class="online-dot"></span> 학생 페이지</span>
+      <a class="vote-home-button" href="index.html"><span aria-hidden="true">←</span> 홈으로 돌아가기</a>
+      <button class="icon-button" id="notification-button" type="button" aria-label="마감 알림 보기">
+        <span aria-hidden="true">♧</span>
+        <span class="notification-count" id="notification-count">0</span>
+      </button>
+      <a class="admin-login-button" href="admin.html">관리자 로그인 <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main class="page-shell vote-page">
+    <section class="vote-page-heading">
+      <span class="eyebrow section-eyebrow">YOUR VOICE MATTERS</span>
+      <h1>투표에 참여해 주세요 <span>🗳️</span></h1>
+      <p>선택지를 고르고 투표하기를 눌러 소중한 의견을 남겨주세요.</p>
+      <span class="voting-anonymous">◉ 익명 투표</span>
+      <p class="vote-completion-message hidden" id="vote-completion-message" role="status" aria-live="polite"></p>
+    </section>
+    <section class="poll-grid vote-poll-grid" id="vote-poll-grid" aria-label="참여 가능한 투표"></section>
+    <div class="empty-state hidden" id="vote-empty-state">
+      <span>📭</span><h2>현재 참여할 수 있는 투표가 없어요</h2>
+      <a class="board-back-link" href="index.html">← 홈으로 돌아가기</a>
+    </div>
+    <footer class="footer">
+      <a class="brand footer-brand" href="index.html"><span class="brand-mark">V</span><span>VOTE<span class="brand-dot">.</span></span></a>
+      <span>모두의 한 표가 만드는 더 나은 학교</span>
+      <a class="board-footer-home" href="index.html">홈으로 ↑</a>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="notification-popover hidden" id="notification-popover" role="status">
+    <div class="popover-heading"><strong>마감 알림</strong><button class="plain-icon" type="button" id="close-notifications" aria-label="알림 닫기">×</button></div>
+    <div id="notification-list"></div>
+  </div>
+</body>
+</html>
