@@ -63,13 +63,26 @@
   function containsPersonalInformation(value) {
     const text = String(value).normalize('NFKC');
     const digits = text.replace(/\D/g, '');
-    const hasPhone = /(?:^|[^\d])(?:01[016789][\s().-]*\d{3,4}[\s().-]*\d{4}|0\d{1,2}[\s().-]*\d{3,4}[\s().-]*\d{4})(?:$|[^\d])/u.test(text);
+    const hasPhone = /(?:^|[^\d])(?:\+?82[\s().-]*0?[\s().-]*)?(?:01[016789][\s().-]*\d{3,4}[\s().-]*\d{4}|0\d{1,2}[\s().-]*\d{3,4}[\s().-]*\d{4})(?:$|[^\d])/u.test(text)
+      || /(?:^|[^\d])\+?82[\s().-]*1[016789][\s().-]*\d{3,4}[\s().-]*\d{4}(?:$|[^\d])/u.test(text);
     const hasEmail = /[\p{L}\p{N}.!#$%&'*+/=?^_`{|}~-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/u.test(text);
-    const hasIdNumber = /\d{13}/.test(digits);
+    const hasIdNumber = /\d{6}[\s-]?[1-4]\d{6}/u.test(text) || /\d{13}/u.test(digits);
     const hasSchoolId = /학번\s*[:：은는이가]?\s*\d{4,10}/u.test(text);
-    const hasNamedIdentity = /(?:이름|실명|성명)\s*(?:은|는|이|가|[:=：])\s*[가-힣]{2,4}(?:[^가-힣]|$)/u.test(text);
-    const hasPersonalAddress = /(?:주소|집\s*주소)\s*[:=：]\s*\S{4,}/u.test(text);
-    return hasPhone || hasEmail || hasIdNumber || hasSchoolId || hasNamedIdentity || hasPersonalAddress;
+    const nameEnding = '(?=$|\\s|[,.;!?]|(?:입니다|이에요|예요|이야|임)(?:\\s|$|[,.;!?]))';
+    const nameLabel = '(?:이름|실명|성명|본명)(?=\\s|은|는|이|가|[:=：])';
+    const hasKoreanName = new RegExp(
+      `${nameLabel}\\s*(?:(?:은|는|이|가)\\s*|[:=：]\\s*)?[가-힣]{2,4}${nameEnding}`,
+      'u'
+    ).test(text)
+      || new RegExp(`(?:저는|나는|제\\s*이름은|내\\s*이름은)\\s*[가-힣]{2,4}${nameEnding}`, 'u').test(text);
+    const hasEnglishName = new RegExp(
+      `${nameLabel}\\s*(?:(?:은|는|이|가)\\s*|[:=：]\\s*)?[A-Z][A-Z.'-]*(?:\\s+[A-Z][A-Z.'-]*){0,2}(?=$|\\s|[,.;!?])`,
+      'iu'
+    ).test(text);
+    const hasLabeledAddress = /(?:집\s*주소|주소|거주지|사는\s*곳)\s*(?:(?:은|는|이|가)\s*)?[:=：]?\s*\S{4,}/u.test(text);
+    const hasKoreanStreetAddress = /(?:(?:서울|부산|대구|인천|광주|대전|울산|세종|제주)(?:특별자치도|특별자치시|특별시|광역시|시)?|[가-힣]{2,}(?:도|특별자치도))\s*[가-힣0-9\s-]{1,30}(?:시|군|구)\s*[가-힣0-9\s-]{1,30}(?:동|읍|면|리|로|길)\s*\d+(?:-\d+)?(?:번지)?/u.test(text);
+    return hasPhone || hasEmail || hasIdNumber || hasSchoolId || hasKoreanName || hasEnglishName
+      || hasLabeledAddress || hasKoreanStreetAddress;
   }
 
   function checkPost(value) {
