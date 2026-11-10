@@ -10,6 +10,7 @@ const BOARD_FILE = path.join(DATA_DIR, 'board.json');
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
 const ADMIN_PASSWORD = process.env.VOTE_ADMIN_PASSWORD || '';
+const LOCAL_PASSWORDLESS_ADMIN = !ADMIN_PASSWORD && isLoopbackAddress(HOST);
 const PUBLIC_ORIGIN = process.env.VOTE_PUBLIC_ORIGIN || '';
 const SESSION_COOKIE = 'vote_admin_session';
 const SESSION_DURATION = 8 * 60 * 60 * 1000;
@@ -28,6 +29,12 @@ const sessions = new Map();
 const requestLimits = new Map();
 let board = { posts: [] };
 let saveQueue = Promise.resolve();
+
+function isLoopbackAddress(address) {
+  const normalized = String(address || '').toLowerCase();
+  if (normalized.startsWith('::ffff:')) return isLoopbackAddress(normalized.slice(7));
+  return normalized === '::1' || /^127(?:\.\d{1,3}){3}$/.test(normalized);
+}
 
 function sendJson(response, status, value, headers = {}) {
   response.writeHead(status, {
@@ -125,6 +132,7 @@ function findSession(request) {
 }
 
 function requireAdmin(request, response) {
+  if (LOCAL_PASSWORDLESS_ADMIN && isLoopbackAddress(request.socket.remoteAddress)) return true;
   if (!ADMIN_PASSWORD) {
     sendError(response, 503, '서버에 관리자 암호(VOTE_ADMIN_PASSWORD)가 설정되지 않았습니다.');
     return false;
@@ -147,7 +155,12 @@ function persistBoard() {
 
 async function handleApi(request, response, url) {
   if (request.method === 'GET' && url.pathname === '/api/board/posts') {
-    sendJson(response, 200, { posts: board.posts.filter(post => !post.deletedAt).map(({ id, text, createdAt }) => ({ id, text, createdAt })) });
+    const posts = board.posts
+      .map((post, index) => ({ post, index }))
+      .filter(({ post }) => !post.deletedAt)
+      .sort((a, b) => b.post.createdAt - a.post.createdAt || b.index - a.index)
+      .map(({ post }) => ({ id: post.id, text: post.text, createdAt: post.createdAt }));
+    sendJson(response, 200, { posts });
     return;
   }
 
@@ -266,8 +279,10 @@ async function handleApi(request, response, url) {
     const reported = board.posts
       .filter(post => !post.deletedAt && post.reports.length > 0)
       .sort((a, b) => b.reports.length - a.reports.length || b.createdAt - a.createdAt)
-      .map(({ id, text, createdAt, reports }) => ({ id, text, createdAt, reportCount: reports.length }));
-    sendJson(response, 200, { posts: reported });
+      .map(({ id, text }) => ({ id, text }));
+    sendJson(response, 200, { posts: reported }, {
+      'X-Admin-Access': LOCAL_PASSWORDLESS_ADMIN ? 'local' : 'session'
+    });
     return;
   }
 
@@ -362,7 +377,9 @@ async function startServer() {
   });
   server.listen(PORT, HOST, () => {
     console.log(`VOTE 서버가 http://${HOST}:${PORT} 에서 실행 중입니다.`);
-    if (!ADMIN_PASSWORD) console.warn('관리자 신고 확인을 위해 VOTE_ADMIN_PASSWORD 환경 변수를 설정해 주세요.');
+    if (!ADMIN_PASSWORD && !LOCAL_PASSWORDLESS_ADMIN) {
+      console.warn('외부 접속에서 신고를 확인하려면 VOTE_ADMIN_PASSWORD 환경 변수를 설정해 주세요.');
+    }
   });
 }
 

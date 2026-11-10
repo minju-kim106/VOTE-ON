@@ -1,3 +1,113 @@
 {
-  "posts": []
+  "posts": [
+    {
+      "id": "a2be9565-65b6-4e56-aa25-5e72adac3eb7",
+      "text": "맛잇는게 많이 나왓으면 조켓어요",
+      "createdAt": 1794290334632,
+      "reports": [
+        {
+          "createdAt": 1794290336757
+        }
+      ],
+      "deletedAt": 1794292235593
+    },
+    {
+      "id": "2e87b2d4-53b3-44ea-b7ed-15c8b7b2e0c8",
+      "text": "맛잇는 밥이 나왓음 조켓어요",
+      "createdAt": 1794290517679,
+      "reports": [
+        {
+          "createdAt": 1794290520878
+        }
+      ],
+      "deletedAt": 1794292233745
+    },
+    {
+      "id": "0407e89d-d291-497d-acaf-04c8d95d81f3",
+      "text": "응애",
+      "createdAt": 1794291205946,
+      "reports": [
+        {
+          "createdAt": 1794291207946
+        }
+      ],
+      "deletedAt": 1794291214274
+    },
+    {
+      "id": "8fa6b7f8-d64b-49af-8948-188ad4f3f21d",
+      "text": "응애",
+      "createdAt": 1794291552678,
+      "reports": [
+        {
+          "createdAt": 1794291749910
+        }
+      ],
+      "deletedAt": 1794291758259
+    },
+    {
+      "id": "86634f62-47e5-4510-86c5-b7f944d08f7e",
+      "text": "응애",
+      "createdAt": 1794291559868,
+      "reports": [
+        {
+          "createdAt": 1794291744944
+        }
+      ],
+      "deletedAt": 1794291756488
+    },
+    {
+      "id": "5cc6493d-3d55-427a-a1b5-5072701d2015",
+      "text": "치킨마요덮밥이 나왔으면 좋겠어요",
+      "createdAt": 1794292066560,
+      "reports": [],
+      "deletedAt": null
+    },
+    {
+      "id": "37827399-5a71-47e5-bca2-3015d7375f58",
+      "text": "미친",
+      "createdAt": 1794292851794,
+      "reports": [
+        {
+          "createdAt": 1794292883309
+        }
+      ],
+      "deletedAt": 1794292889686
+    },
+    {
+      "id": "423f5b68-3488-42fa-870e-5f251e211eb9",
+      "text": "김민주",
+      "createdAt": 1794292871338,
+      "reports": [
+        {
+          "createdAt": 1794292882391
+        }
+      ],
+      "deletedAt": 1794292888111
+    },
+    {
+      "id": "e9ec7285-6220-44d7-8782-c889433a1e39",
+      "text": "광양시",
+      "createdAt": 1794292913141,
+      "reports": [
+        {
+          "createdAt": 1794292914694
+        },
+        {
+          "createdAt": 1794292928941
+        }
+      ],
+      "deletedAt": 1794292933832
+    },
+    {
+      "id": "5efa231d-fda7-4694-960b-1502c9009814",
+      "text": "3203",
+      "createdAt": 1794292925420,
+      "reports": [
+        {
+          "createdAt": 1794292927461
+        }
+      ],
+      "deletedAt": 1794292935598
+    }
+  ]
 }

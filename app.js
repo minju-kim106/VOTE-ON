@@ -210,7 +210,10 @@ function renderStats() {
 
 function renderPosts() {
   if (!document.querySelector('#post-list')) return;
-  const sortedPosts = [...boardPosts].sort((a, b) => b.createdAt - a.createdAt);
+  const sortedPosts = boardPosts
+    .map((post, index) => ({ post, index }))
+    .sort((a, b) => b.post.createdAt - a.post.createdAt || b.index - a.index)
+    .map(({ post }) => post);
   document.querySelector('#post-count').textContent = `${sortedPosts.length}개의 익명 의견`;
   document.querySelector('#post-list').innerHTML = sortedPosts.length
     ? sortedPosts.map(post => `<article class="post-item"><div class="avatar-anon" aria-hidden="true">익</div><div class="post-item-body"><span class="post-author">익명</span><time class="post-time">${escapeHTML(relativeTime(post.createdAt))}</time><p class="post-text">${escapeHTML(post.text)}</p><button class="report-post-button" type="button" data-report-post="${escapeHTML(post.id)}">신고</button></div></article>`).join('')
@@ -393,7 +396,7 @@ function setAdminReportMessage(message, isError = false) {
 
 function renderAdminReports(posts) {
   adminReportList.innerHTML = posts.length
-    ? posts.map(post => `<article class="reported-post"><div><p class="post-text">${escapeHTML(post.text)}</p><span>${post.reportCount}회 신고 · ${escapeHTML(relativeTime(post.createdAt))}</span></div><button class="admin-delete-post" type="button" data-delete-reported-post="${escapeHTML(post.id)}">삭제</button></article>`).join('')
+    ? posts.map(post => `<article class="reported-post"><p class="post-text">${escapeHTML(post.text)}</p><button class="admin-delete-post" type="button" data-delete-reported-post="${escapeHTML(post.id)}">삭제</button></article>`).join('')
     : '<div class="admin-empty">확인할 신고 게시글이 없습니다.</div>';
 }
 
@@ -402,10 +405,10 @@ async function loadAdminReports() {
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || '신고 목록을 불러오지 못했습니다.');
   adminLoginForm.classList.add('hidden');
-  adminLogoutButton.classList.remove('hidden');
+  adminLogoutButton.classList.toggle('hidden', response.headers.get('X-Admin-Access') === 'local');
   adminReportList.classList.remove('hidden');
   renderAdminReports(result.posts);
-  setAdminReportMessage('신고된 게시글을 확인하고 필요한 경우 삭제할 수 있습니다.');
+  setAdminReportMessage('신고된 게시글을 불러왔습니다.');
 }
 
 if (adminLoginForm) adminLoginForm.addEventListener('submit', async event => {
@@ -428,6 +431,11 @@ if (adminLoginForm) adminLoginForm.addEventListener('submit', async event => {
   } finally {
     submitButton.disabled = false;
   }
+});
+
+if (adminReportList) loadAdminReports().catch(error => {
+  adminLoginForm.classList.remove('hidden');
+  setAdminReportMessage(error.message || '신고 목록을 불러오지 못했습니다.', true);
 });
 
 if (adminReportList) adminReportList.addEventListener('click', async event => {
@@ -519,12 +527,6 @@ if (pollForm) pollForm.addEventListener('submit', event => {
   }
   if (saveData()) {
     renderAll();
-
-    if (postList) loadBoardPosts().catch(error => {
-      console.error('게시글을 불러오지 못했습니다.', error);
-      setPostMessage('게시판 서버에 연결할 수 없습니다. 안내된 방법으로 서버를 실행해 주세요.', true);
-    });
-
     if (adminReportList) loadAdminReports().catch(error => {
       if (!error.message.includes('관리자 로그인이 필요합니다.')) {
         setAdminReportMessage(error.message || '신고 목록을 불러오지 못했습니다.', true);
@@ -605,3 +607,8 @@ document.querySelectorAll('.nav-link').forEach(link => {
 });
 
 renderAll();
+
+if (postList) loadBoardPosts().catch(error => {
+  console.error('게시글을 불러오지 못했습니다.', error);
+  setPostMessage('게시판 서버에 연결할 수 없습니다. 안내된 방법으로 서버를 실행해 주세요.', true);
+});
