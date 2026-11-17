@@ -114,6 +114,7 @@ h2 { color: var(--ink); margin: 9px 0 6px; font-size: 25px; letter-spacing: -1px
 .poll-state { font-size: 9px; color: #36b481; font-weight: 700; }
 .poll-state.closed { color: #9aa5b5; }
 .poll-title { margin: 0; font-size: 15px; line-height: 1.5; letter-spacing: -.4px; }
+.poll-description { margin: -5px 0 0; color: #77869d; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .poll-meta { display: flex; align-items: center; gap: 11px; color: #9aa5b5; font-size: 9px; margin-bottom: 12px; }
 .poll-meta .deadline-soon { color: #f09262; font-weight: 700; }
 .option-list { display: grid; gap: 7px; }
@@ -283,7 +284,7 @@ button.vote-option:hover:not(:disabled) { border-color: #b7caff; background: #f5
   .decoration-one { left: 75%; top: 23px; }
   .stats-row { min-height: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 17px 4px; padding: 17px 15px; }
   .stat-item { border: 0; padding: 0 4px; gap: 8px; }
-  .stat-item:nth-child(3) { grid-column: 1 / -1; }
+  .stat-caption { grid-column: 1 / -1; }
   .stat-icon { width: 31px; height: 31px; }
   .stat-item strong { font-size: 15px; }
   .content-section { padding: 58px 0 53px; }

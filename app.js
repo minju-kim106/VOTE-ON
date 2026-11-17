@@ -139,7 +139,9 @@ function showToast(message) {
 
 function renderPolls() {
   if (!pollGrid) return;
-  const polls = [...data.polls].sort((a, b) => b.createdAt - a.createdAt);
+  const polls = data.polls
+    .filter(poll => poll.closed)
+    .sort((a, b) => b.createdAt - a.createdAt);
   document.querySelector('#empty-state').classList.toggle('hidden', polls.length > 0);
   pollGrid.innerHTML = polls.map(renderPollCard).join('');
 }
@@ -172,6 +174,7 @@ function renderVotePolls() {
     return `<article class="poll-card vote-card" data-vote-card="${escapeHTML(poll.id)}">
       <div class="poll-card-top"><span class="category-tag">${escapeHTML(poll.category)}</span><span class="poll-state">● 진행 중</span></div>
       <h2 class="poll-title">${escapeHTML(poll.question)}</h2>
+      ${poll.description ? `<p class="poll-description">${escapeHTML(poll.description)}</p>` : ''}
       <div class="poll-meta"><span>${escapeHTML(poll.author)}</span><span>${escapeHTML(formatRemaining(poll.deadline))}</span></div>
       <form class="vote-form" data-vote-form="${escapeHTML(poll.id)}">
         <fieldset class="vote-choice-list">
@@ -196,6 +199,7 @@ function renderPollCard(poll) {
 
   return `<article class="poll-card">
     <h3 class="poll-title">${escapeHTML(poll.question)}</h3>
+    ${poll.description ? `<p class="poll-description">${escapeHTML(poll.description)}</p>` : ''}
     <div class="option-list">${options}</div>
   </article>`;
 }
@@ -205,7 +209,6 @@ function renderStats() {
   const openPolls = data.polls.filter(poll => !isClosed(poll));
   document.querySelector('#active-count').textContent = openPolls.length;
   document.querySelector('#closed-count').textContent = data.polls.filter(isClosed).length;
-  document.querySelector('#total-voters').textContent = data.polls.reduce((sum, poll) => sum + pollTotal(poll), 0).toLocaleString('ko-KR');
 }
 
 function renderPosts() {
@@ -315,6 +318,56 @@ function resetPollForm() {
   document.querySelector('#form-title').textContent = '새 투표 만들기';
   document.querySelector('#save-poll-button').textContent = '투표 생성하기';
   document.querySelector('#cancel-edit-button').classList.add('hidden');
+}
+
+function updatePollOptions(poll, optionTexts) {
+  const oldToNew = new Map();
+  const usedOldIndexes = new Set();
+  const newToOld = new Map();
+
+  optionTexts.forEach((text, newIndex) => {
+    const oldIndex = poll.options.findIndex((option, index) =>
+      !usedOldIndexes.has(index) && option.text === text
+    );
+    if (oldIndex !== -1) {
+      oldToNew.set(oldIndex, newIndex);
+      newToOld.set(newIndex, oldIndex);
+      usedOldIndexes.add(oldIndex);
+    }
+  });
+
+  optionTexts.forEach((text, newIndex) => {
+    if (newToOld.has(newIndex)) return;
+    const sameIndex = poll.options[newIndex];
+    if (sameIndex && !usedOldIndexes.has(newIndex)) {
+      oldToNew.set(newIndex, newIndex);
+      newToOld.set(newIndex, newIndex);
+      usedOldIndexes.add(newIndex);
+      return;
+    }
+    const oldIndex = poll.options.findIndex((option, index) => !usedOldIndexes.has(index));
+    if (oldIndex !== -1) {
+      oldToNew.set(oldIndex, newIndex);
+      newToOld.set(newIndex, oldIndex);
+      usedOldIndexes.add(oldIndex);
+    }
+  });
+
+  const removedVotedOption = poll.options.some((option, index) =>
+    option.votes > 0 && !oldToNew.has(index)
+  );
+  const recordedVote = data.votesByPoll[poll.id];
+  if (removedVotedOption || (recordedVote !== undefined && !oldToNew.has(recordedVote))) {
+    return null;
+  }
+
+  return {
+    options: optionTexts.map((text, newIndex) => {
+      const oldIndex = newToOld.get(newIndex);
+      return { text, votes: oldIndex === undefined ? 0 : poll.options[oldIndex].votes };
+    }),
+    voteIndex: recordedVote === undefined ? undefined : oldToNew.get(recordedVote)
+  };
 }
 
 const postInput = document.querySelector('#post-input');
@@ -474,11 +527,15 @@ if (pollForm) pollForm.addEventListener('submit', event => {
   event.preventDefault();
   const id = document.querySelector('#poll-id').value;
   const question = document.querySelector('#poll-question').value.trim();
+  const description = document.querySelector('#poll-description').value.trim();
   const category = document.querySelector('#poll-category').value;
   const optionTexts = document.querySelector('#poll-options').value.split(/\r?\n/).map(option => option.trim()).filter(Boolean);
   const deadlineValue = document.querySelector('#poll-deadline').value;
   const author = document.querySelector('#poll-author').value.trim() || '학생회';
   const deadline = new Date(deadlineValue);
+  let editedPoll;
+  let previousPoll;
+  let previousVote;
 
   if (optionTexts.length < 2) {
     showToast('선택지는 두 개 이상 입력해 주세요.');
@@ -495,26 +552,27 @@ if (pollForm) pollForm.addEventListener('submit', event => {
       showToast('수정할 투표를 찾지 못했어요.');
       return;
     }
-    const hasVotes = poll.options.some(option => option.votes > 0);
-    const optionsChanged = poll.options.length !== optionTexts.length
-      || poll.options.some((option, index) => option.text !== optionTexts[index]);
-    if (hasVotes && optionsChanged) {
-      showToast('이미 표가 있는 투표의 선택지는 바꿀 수 없어요.');
+    const updatedOptions = updatePollOptions(poll, optionTexts);
+    if (!updatedOptions) {
+      showToast('이미 표가 있는 선택지는 삭제할 수 없어요.');
       return;
     }
+    editedPoll = poll;
+    previousPoll = { ...poll, options: poll.options.map(option => ({ ...option })) };
+    previousVote = data.votesByPoll[poll.id];
     poll.question = question;
+    poll.description = description;
     poll.category = category;
     poll.deadline = deadline.toISOString();
     poll.author = author;
-    poll.options = optionTexts.map((text, index) => ({
-      text,
-      votes: poll.options[index]?.text === text ? poll.options[index].votes : 0
-    }));
+    poll.options = updatedOptions.options;
+    if (updatedOptions.voteIndex !== undefined) data.votesByPoll[poll.id] = updatedOptions.voteIndex;
     document.querySelector('#form-message').textContent = '투표를 수정했어요.';
   } else {
     const newPoll = {
       id: `poll-${Date.now()}`,
       question,
+      description,
       category,
       options: optionTexts.map(text => ({ text, votes: 0 })),
       deadline: deadline.toISOString(),
@@ -534,6 +592,10 @@ if (pollForm) pollForm.addEventListener('submit', event => {
     });
     resetPollForm();
     document.querySelector('#admin').scrollIntoView({ behavior: 'smooth' });
+  } else if (editedPoll && previousPoll) {
+    Object.assign(editedPoll, previousPoll);
+    if (previousVote === undefined) delete data.votesByPoll[editedPoll.id];
+    else data.votesByPoll[editedPoll.id] = previousVote;
   }
 });
 
@@ -548,6 +610,7 @@ if (adminPollList) adminPollList.addEventListener('click', event => {
     }
     document.querySelector('#poll-id').value = poll.id;
     document.querySelector('#poll-question').value = poll.question;
+    document.querySelector('#poll-description').value = poll.description || '';
     document.querySelector('#poll-category').value = poll.category;
     document.querySelector('#poll-options').value = poll.options.map(option => option.text).join('\n');
     const localDate = new Date(poll.deadline);
