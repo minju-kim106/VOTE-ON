@@ -16,6 +16,21 @@ npm start
 
 게시글과 신고 내역은 `data/board.json`에 저장됩니다. `moderation.js`의 금지 표현 목록은 `checkPost` 함수가 브라우저와 서버에서 함께 사용합니다. 표현을 바꾸거나 추가하더라도 우회 문자가 쓰일 수 있으므로 서버 검사는 항상 유지해야 합니다.
 
+## Render 배포
+
+Render 대시보드에서 Git 저장소를 연결해 **Web Service**를 만들고 다음과 같이 설정합니다.
+
+- **Build Command:** `npm install`
+- **Start Command:** `npm start`
+- **Environment Variables:**
+  - `HOST=0.0.0.0`
+  - `VOTE_ADMIN_PASSWORD`: 16자 이상의 관리자 암호
+  - `VOTE_PUBLIC_ORIGIN`: 배포된 서비스의 HTTPS 주소 (예: `https://서비스이름.onrender.com`)
+  - `VOTE_COOKIE_SECURE=true`
+  - `VOTE_DATA_DIR=/var/data`
+
+게시글 데이터를 재배포와 재시작 후에도 보존하려면 유료 Web Service에 **Persistent Disk**를 추가하고 mount path를 `/var/data`로 지정해야 합니다. Render의 기본 파일시스템은 임시 저장소이므로 영구 디스크 없이 실행하면 게시글과 신고 내역이 재배포 또는 재시작 시 사라질 수 있습니다. 기존 로컬 실행에서는 `VOTE_DATA_DIR`을 지정하지 않으면 계속 `data/board.json`을 사용합니다.
+
 ## 안전 관련 참고
 
 - 서버는 게시글을 파일에 저장하기 전에 욕설·비방 표현과 이름, 학번, 전화번호, 이메일, 주소, 주민등록번호 형식의 개인정보를 검사합니다. 이름과 주소 검사는 입력 문맥과 알려진 주소 형식을 이용한 패턴 검사이므로 모든 개인정보를 완벽하게 찾아내지는 못합니다.

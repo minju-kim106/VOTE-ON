@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const VoteModeration = require('./moderation.js');
 
 const ROOT = __dirname;
-const DATA_DIR = path.join(ROOT, 'data');
+const DATA_DIR = path.resolve(process.env.VOTE_DATA_DIR || path.join(ROOT, 'data'));
 const BOARD_FILE = path.join(DATA_DIR, 'board.json');
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';

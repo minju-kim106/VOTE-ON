@@ -9,7 +9,7 @@ const { spawn } = require('node:child_process');
 test('adding a post preserves existing posts in the list and on disk', async () => {
   const temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'vote-board-test-'));
   const projectDirectory = path.join(temporaryDirectory, 'project');
-  const dataDirectory = path.join(projectDirectory, 'data');
+  const dataDirectory = path.join(temporaryDirectory, 'persistent-data');
   const existingPost = {
     id: 'existing-post',
     text: '기존 게시글',
@@ -20,6 +20,7 @@ test('adding a post preserves existing posts in the list and on disk', async () 
   let serverProcess;
 
   try {
+    await fs.mkdir(projectDirectory, { recursive: true });
     await fs.mkdir(dataDirectory, { recursive: true });
     await Promise.all(['server.js', 'moderation.js'].map(file =>
       fs.copyFile(path.join(__dirname, file), path.join(projectDirectory, file))
@@ -41,7 +42,13 @@ test('adding a post preserves existing posts in the list and on disk', async () 
 
     serverProcess = spawn(process.execPath, ['server.js'], {
       cwd: projectDirectory,
-      env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), VOTE_ADMIN_PASSWORD: '' },
+      env: {
+        ...process.env,
+        HOST: '127.0.0.1',
+        PORT: String(port),
+        VOTE_ADMIN_PASSWORD: '',
+        VOTE_DATA_DIR: dataDirectory
+      },
       stdio: 'ignore'
     });
 
@@ -77,7 +84,13 @@ test('adding a post preserves existing posts in the list and on disk', async () 
     await new Promise(resolve => serverProcess.once('exit', resolve));
     serverProcess = spawn(process.execPath, ['server.js'], {
       cwd: projectDirectory,
-      env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), VOTE_ADMIN_PASSWORD: '' },
+      env: {
+        ...process.env,
+        HOST: '127.0.0.1',
+        PORT: String(port),
+        VOTE_ADMIN_PASSWORD: '',
+        VOTE_DATA_DIR: dataDirectory
+      },
       stdio: 'ignore'
     });
 
