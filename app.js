@@ -436,10 +436,8 @@ if (postList) postList.addEventListener('click', async event => {
   }
 });
 
-const adminLoginForm = document.querySelector('#admin-login-form');
 const adminReportList = document.querySelector('#admin-reports-list');
 const adminReportMessage = document.querySelector('#admin-report-message');
-const adminLogoutButton = document.querySelector('#admin-logout-button');
 
 function setAdminReportMessage(message, isError = false) {
   if (!adminReportMessage) return;
@@ -457,37 +455,12 @@ async function loadAdminReports() {
   const response = await fetch('/api/admin/reports');
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || '신고 목록을 불러오지 못했습니다.');
-  adminLoginForm.classList.add('hidden');
-  adminLogoutButton.classList.toggle('hidden', response.headers.get('X-Admin-Access') === 'local');
   adminReportList.classList.remove('hidden');
   renderAdminReports(result.posts);
   setAdminReportMessage('신고된 게시글을 불러왔습니다.');
 }
 
-if (adminLoginForm) adminLoginForm.addEventListener('submit', async event => {
-  event.preventDefault();
-  const passwordInput = document.querySelector('#admin-password');
-  const submitButton = adminLoginForm.querySelector('button[type="submit"]');
-  submitButton.disabled = true;
-  try {
-    const response = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: passwordInput.value })
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || '로그인하지 못했습니다.');
-    passwordInput.value = '';
-    await loadAdminReports();
-  } catch (error) {
-    setAdminReportMessage(error.message || '로그인하지 못했습니다.', true);
-  } finally {
-    submitButton.disabled = false;
-  }
-});
-
 if (adminReportList) loadAdminReports().catch(error => {
-  adminLoginForm.classList.remove('hidden');
   setAdminReportMessage(error.message || '신고 목록을 불러오지 못했습니다.', true);
 });
 
@@ -508,19 +481,6 @@ if (adminReportList) adminReportList.addEventListener('click', async event => {
   }
 });
 
-if (adminLogoutButton) adminLogoutButton.addEventListener('click', async () => {
-  try {
-    const response = await fetch('/api/admin/logout', { method: 'POST' });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || '로그아웃하지 못했습니다.');
-    adminLoginForm.classList.remove('hidden');
-    adminLogoutButton.classList.add('hidden');
-    adminReportList.classList.add('hidden');
-    setAdminReportMessage('로그아웃했습니다.');
-  } catch (error) {
-    setAdminReportMessage(error.message || '로그아웃하지 못했습니다.', true);
-  }
-});
 
 const pollForm = document.querySelector('#poll-form');
 if (pollForm) pollForm.addEventListener('submit', event => {
@@ -586,9 +546,7 @@ if (pollForm) pollForm.addEventListener('submit', event => {
   if (saveData()) {
     renderAll();
     if (adminReportList) loadAdminReports().catch(error => {
-      if (!error.message.includes('관리자 로그인이 필요합니다.')) {
-        setAdminReportMessage(error.message || '신고 목록을 불러오지 못했습니다.', true);
-      }
+      setAdminReportMessage(error.message || '신고 목록을 불러오지 못했습니다.', true);
     });
     resetPollForm();
     document.querySelector('#admin').scrollIntoView({ behavior: 'smooth' });

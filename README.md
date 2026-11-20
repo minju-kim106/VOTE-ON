@@ -12,7 +12,7 @@ VOTE는 익명 게시글의 안전 검사를 브라우저와 서버 양쪽에서
 npm start
 ```
 
-서버가 시작되면 브라우저에서 `http://127.0.0.1:3000`을 엽니다. 기본 서버는 현재 컴퓨터에서만 접속할 수 있도록 설정되어 있고, 이 경우 관리자 페이지에서 신고 목록을 암호 없이 확인할 수 있습니다. 서버를 외부 네트워크에 열 경우에는 `VOTE_ADMIN_PASSWORD`에 16자 이상의 암호를 설정해야 신고 목록과 삭제 기능을 사용할 수 있습니다.
+서버가 시작되면 브라우저에서 `http://127.0.0.1:3000`을 엽니다. 관리자 신고 목록과 삭제 기능은 별도의 암호 없이 사용할 수 있습니다.
 
 게시글과 신고 내역은 `data/board.json`에 저장됩니다. `moderation.js`의 금지 표현 목록은 `checkPost` 함수가 브라우저와 서버에서 함께 사용합니다. 표현을 바꾸거나 추가하더라도 우회 문자가 쓰일 수 있으므로 서버 검사는 항상 유지해야 합니다.
 
@@ -24,7 +24,6 @@ Render 대시보드에서 Git 저장소를 연결해 **Web Service**를 만들�
 - **Start Command:** `npm start`
 - **Environment Variables:**
   - `HOST=0.0.0.0`
-  - `VOTE_ADMIN_PASSWORD`: 16자 이상의 관리자 암호
   - `VOTE_PUBLIC_ORIGIN`: 배포된 서비스의 HTTPS 주소 (예: `https://서비스이름.onrender.com`)
   - `VOTE_COOKIE_SECURE=true`
   - `VOTE_DATA_DIR=/var/data`

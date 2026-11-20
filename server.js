@@ -9,11 +9,7 @@ const DATA_DIR = path.resolve(process.env.VOTE_DATA_DIR || path.join(ROOT, 'data
 const BOARD_FILE = path.join(DATA_DIR, 'board.json');
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '127.0.0.1';
-const ADMIN_PASSWORD = process.env.VOTE_ADMIN_PASSWORD || '';
-const LOCAL_PASSWORDLESS_ADMIN = !ADMIN_PASSWORD && isLoopbackAddress(HOST);
 const PUBLIC_ORIGIN = process.env.VOTE_PUBLIC_ORIGIN || '';
-const SESSION_COOKIE = 'vote_admin_session';
-const SESSION_DURATION = 8 * 60 * 60 * 1000;
 const MAX_REQUEST_SIZE = 16 * 1024;
 const allowedFiles = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
@@ -25,16 +21,9 @@ const allowedFiles = new Map([
   ['/moderation.js', ['moderation.js', 'text/javascript; charset=utf-8']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']]
 ]);
-const sessions = new Map();
 const requestLimits = new Map();
 let board = { posts: [] };
 let saveQueue = Promise.resolve();
-
-function isLoopbackAddress(address) {
-  const normalized = String(address || '').toLowerCase();
-  if (normalized.startsWith('::ffff:')) return isLoopbackAddress(normalized.slice(7));
-  return normalized === '::1' || /^127(?:\.\d{1,3}){3}$/.test(normalized);
-}
 
 function sendJson(response, status, value, headers = {}) {
   response.writeHead(status, {
@@ -118,29 +107,7 @@ function isRateLimited(request, key, limit, windowMs) {
   return record.count > limit;
 }
 
-function findSession(request) {
-  const cookies = request.headers.cookie || '';
-  const entry = cookies.split(';').map(part => part.trim()).find(part => part.startsWith(`${SESSION_COOKIE}=`));
-  if (!entry) return null;
-  const token = entry.slice(SESSION_COOKIE.length + 1);
-  const session = sessions.get(token);
-  if (!session || session.expiresAt <= Date.now()) {
-    sessions.delete(token);
-    return null;
-  }
-  return session;
-}
-
 function requireAdmin(request, response) {
-  if (LOCAL_PASSWORDLESS_ADMIN && isLoopbackAddress(request.socket.remoteAddress)) return true;
-  if (!ADMIN_PASSWORD) {
-    sendError(response, 503, '서버에 관리자 암호(VOTE_ADMIN_PASSWORD)가 설정되지 않았습니다.');
-    return false;
-  }
-  if (!findSession(request)) {
-    sendError(response, 401, '관리자 로그인이 필요합니다.');
-    return false;
-  }
   return true;
 }
 
@@ -231,58 +198,13 @@ async function handleApi(request, response, url) {
     return;
   }
 
-  if (request.method === 'POST' && url.pathname === '/api/admin/login') {
-    if (!requireSameOrigin(request, response) || !requireJson(request, response)) return;
-    if (!ADMIN_PASSWORD) {
-      sendError(response, 503, '서버에 관리자 암호(VOTE_ADMIN_PASSWORD)가 설정되지 않았습니다.');
-      return;
-    }
-    if (isRateLimited(request, 'login', 5, 15 * 60_000)) {
-      sendError(response, 429, '로그인 시도가 많습니다. 잠시 후 다시 시도해 주세요.');
-      return;
-    }
-    let payload;
-    try {
-      payload = await readJson(request);
-    } catch (error) {
-      sendError(response, error.status || 400, error.message);
-      return;
-    }
-    const submittedHash = crypto.createHash('sha256').update(String(payload.password || '')).digest();
-    const expectedHash = crypto.createHash('sha256').update(ADMIN_PASSWORD).digest();
-    if (!crypto.timingSafeEqual(submittedHash, expectedHash)) {
-      sendError(response, 401, '암호가 올바르지 않습니다.');
-      return;
-    }
-    const token = crypto.randomBytes(32).toString('base64url');
-    sessions.set(token, { expiresAt: Date.now() + SESSION_DURATION });
-    const secure = request.socket.encrypted || process.env.VOTE_COOKIE_SECURE === 'true' ? '; Secure' : '';
-    sendJson(response, 200, { message: '관리자 로그인에 성공했습니다.' }, {
-      'Set-Cookie': `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_DURATION / 1000}${secure}`
-    });
-    return;
-  }
-
-  if (request.method === 'POST' && url.pathname === '/api/admin/logout') {
-    if (!requireSameOrigin(request, response)) return;
-    const cookies = request.headers.cookie || '';
-    const entry = cookies.split(';').map(part => part.trim()).find(part => part.startsWith(`${SESSION_COOKIE}=`));
-    if (entry) sessions.delete(entry.slice(SESSION_COOKIE.length + 1));
-    sendJson(response, 200, { message: '로그아웃했습니다.' }, {
-      'Set-Cookie': `${SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`
-    });
-    return;
-  }
-
   if (request.method === 'GET' && url.pathname === '/api/admin/reports') {
     if (!requireAdmin(request, response)) return;
     const reported = board.posts
       .filter(post => !post.deletedAt && post.reports.length > 0)
       .sort((a, b) => b.reports.length - a.reports.length || b.createdAt - a.createdAt)
       .map(({ id, text }) => ({ id, text }));
-    sendJson(response, 200, { posts: reported }, {
-      'X-Admin-Access': LOCAL_PASSWORDLESS_ADMIN ? 'local' : 'session'
-    });
+    sendJson(response, 200, { posts: reported });
     return;
   }
 
@@ -355,9 +277,6 @@ async function loadBoard() {
 }
 
 async function startServer() {
-  if (ADMIN_PASSWORD && ADMIN_PASSWORD.length < 16) {
-    throw new Error('VOTE_ADMIN_PASSWORD는 16자 이상으로 설정해 주세요.');
-  }
   await loadBoard();
   const server = http.createServer((request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
@@ -377,9 +296,6 @@ async function startServer() {
   });
   server.listen(PORT, HOST, () => {
     console.log(`VOTE 서버가 http://${HOST}:${PORT} 에서 실행 중입니다.`);
-    if (!ADMIN_PASSWORD && !LOCAL_PASSWORDLESS_ADMIN) {
-      console.warn('외부 접속에서 신고를 확인하려면 VOTE_ADMIN_PASSWORD 환경 변수를 설정해 주세요.');
-    }
   });
 }
 

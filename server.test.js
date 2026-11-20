@@ -46,7 +46,6 @@ test('adding a post preserves existing posts in the list and on disk', async () 
         ...process.env,
         HOST: '127.0.0.1',
         PORT: String(port),
-        VOTE_ADMIN_PASSWORD: '',
         VOTE_DATA_DIR: dataDirectory
       },
       stdio: 'ignore'
@@ -88,7 +87,6 @@ test('adding a post preserves existing posts in the list and on disk', async () 
         ...process.env,
         HOST: '127.0.0.1',
         PORT: String(port),
-        VOTE_ADMIN_PASSWORD: '',
         VOTE_DATA_DIR: dataDirectory
       },
       stdio: 'ignore'
